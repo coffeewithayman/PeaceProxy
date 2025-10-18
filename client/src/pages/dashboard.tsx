@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import type { Message } from "@shared/schema";
 import { MessageCard } from "@/components/message-card";
 import { StatsCard } from "@/components/stats-card";
+import { ParentPairManager } from "@/components/parent-pair-manager";
 import { Shield, MessageSquare, CheckCircle, XCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Dashboard() {
   const { data: messages, isLoading } = useQuery<Message[]>({
@@ -38,11 +40,14 @@ export default function Dashboard() {
                 AI-powered communication moderation
               </p>
             </div>
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 md:px-8 space-y-8">
+        <ParentPairManager />
+
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatsCard
             title="Total Messages"

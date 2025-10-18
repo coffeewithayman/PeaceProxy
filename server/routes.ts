@@ -17,6 +17,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/parent-pairs", async (req, res) => {
+    try {
+      const pair = await storage.createParentPair(req.body);
+      res.json(pair);
+    } catch (error) {
+      console.error("Error creating parent pair:", error);
+      res.status(500).json({ error: "Failed to create parent pair" });
+    }
+  });
+
+  app.get("/api/parent-pairs", async (_req, res) => {
+    try {
+      const pairs = await storage.getAllParentPairs();
+      res.json(pairs);
+    } catch (error) {
+      console.error("Error fetching parent pairs:", error);
+      res.status(500).json({ error: "Failed to fetch parent pairs" });
+    }
+  });
+
   app.post("/api/sms/webhook", async (req, res) => {
     try {
       const { From, To, Body } = req.body;
@@ -25,9 +45,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).send("Missing required fields");
       }
 
+      const recipientPhone = await storage.findPartnerPhone(From);
+
+      if (!recipientPhone) {
+        console.error(`No partner phone found for sender: ${From}`);
+        const twilioClient = await getTwilioClient();
+        const fromNumber = await getTwilioFromPhoneNumber();
+        
+        await twilioClient.messages.create({
+          body: "Your phone number is not registered in the co-parent messaging system. Please contact support to set up your account.",
+          from: fromNumber,
+          to: From,
+        });
+        
+        return res.status(200).send("OK");
+      }
+
       const message = await storage.createMessage({
         fromPhone: From,
         toPhone: To,
+        recipientPhone: recipientPhone,
         content: Body,
         status: "pending",
         moderationResult: null,
@@ -54,9 +91,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await twilioClient.messages.create({
           body: Body,
           from: fromNumber,
-          to: To,
+          to: recipientPhone,
         });
-        console.log(`Message approved and forwarded from ${From} to ${To}`);
+        console.log(`Message approved and forwarded from ${From} to ${recipientPhone}`);
       } else {
         await twilioClient.messages.create({
           body: feedback,
